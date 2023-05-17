@@ -20,4 +20,5 @@ The following software is required to test out the scenarios:
 |argo:install|Installs or upgrades ArgoCD on the given test cluster|cluster_name (default: argotest)|
 |argo:forward|Forward the ArgoCD API Server in a given test cluster to a local port|cluster_name (default: argotest), port (default: 8080)|
 |argo:password|Print the initial ArgoCD admin password in a given test cluster|cluster_name (default: argotest)|
+|scenario:helm|Install the helm chart scenario to the given test cluster|cluster_name (default: argotest)|
 |scenario:manifests|Install the raw manifest scenario to the given test cluster|cluster_name (default: argotest)|

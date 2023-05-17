@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: reloader
+  namespace: argocd
+spec:
+  project: cluster-components
+  source:
+    chart: reloader
+    repoURL: https://stakater.github.io/stakater-charts
+    targetRevision: 1.0.10
+    helm:
+      releaseName: reloader     
+      parameters:
+      {{- range $key, $value := .Values.reloader.values }}
+      - name: {{ $key | quote }}
+        value: {{ $value | quote }}
+      {{- end }}
+  destination:
+    server: "{{ .Values.spec.destination.server }}"
+    namespace: reloader
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,37 @@
+
+cert-manager:
+  values:
+    installCRDs: true
+    webhook.resources.requests.memory: 50Mi
+    webhook.resources.requests.cpu: 10m
+    webhook.resources.limits.memory: 50Mi
+    cainjector.resources.requests.memory: 100Mi
+    cainjector.resources.requests.cpu: 10m
+    cainjector.resources.limits.memory: 100Mi
+    resources.requests.memory: 100Mi
+    resources.requests.cpu: 50m
+    resources.requests.memory: 100Mi
+
+ingress-controller:
+  values:
+    controller.replicaCount: 2
+    controller.minAvailable: 1
+    controller.resources.requests.cpu: 100m
+    controller.resources.requests.memory: 64Mi
+    controller.enableCustomResources: true
+    controller.enableCertManager: true
+    controller.service.type: NodePort # No LoadBalancer in kind cluster :)
+
+kube-state-metrics:
+  values:
+    resources.limits.cpu: 100m
+    resources.limits.memory: 64Mi
+    resources.requests.cpu: 10m
+    resources.requests.memory: 32Mi
+
+reloader:
+  values:
+    reloader.watchGlobally: true
+    reloader.deployment.resources.limits.memory: 128Mi
+    reloader.deployment.resources.requests.cpu: 10m
+    reloader.deployment.resources.requests.memory: 64Mi

@@ -4,13 +4,24 @@ metadata:
   name: kube-state-metrics
   namespace: argocd
 spec:
-  project: default
+  project: cluster-components
   source:
     chart: kube-state-metrics
     repoURL: https://prometheus-community.github.io/helm-charts
     targetRevision: 4.31.0
     helm:
       releaseName: kube-state-metrics
+      parameters:
+      {{- range $key, $value := index .Values "kube-state-metrics" "values" }}
+      - name: {{ $key | quote }}
+        value: {{ $value | quote }}
+      {{- end }}
   destination:
     server: "{{ .Values.spec.destination.server }}"
     namespace: kube-state-metrics
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

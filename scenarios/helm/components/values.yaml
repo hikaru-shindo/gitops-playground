@@ -1,0 +1,16 @@
+spec:
+  destination:
+    server: https://kubernetes.default.svc
+
+cert-manager:
+  values: {}
+
+ingress-controller:
+  values: {}
+
+kube-state-metrics:
+  values: {}
+
+reloader:
+  values: {}
+  

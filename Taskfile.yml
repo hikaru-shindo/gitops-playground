@@ -27,6 +27,7 @@ tasks:
       - helm repo update
       - helm upgrade --kube-context kind-{{.cluster_name}} --install --wait --namespace argocd --create-namespace --values helm-values.yaml argocd argo/argo-cd
       - kubectl apply --context kind-{{ .cluster_name }} -f networkpolicies.yaml
+      - kubectl apply --context kind-{{ .cluster_name }} -f projects.yaml
 
   argo:forward:
     desc: Forward the argocd UI to a local port
@@ -41,8 +42,14 @@ tasks:
     silent: true
 
   scenario:manifests:
-    desc: Install the raw manifests scenario to argocd\
+    desc: Install the raw manifests scenario to argocd
     dir: scenarios/raw-manifests
+    cmds:
+      - kubectl apply --context kind-{{ .cluster_name }} -f application.yaml
+
+  scenario:helm:
+    desc: Install the helm chart scenario to argocd
+    dir: scenarios/helm
     cmds:
       - kubectl apply --context kind-{{ .cluster_name }} -f application.yaml
       
