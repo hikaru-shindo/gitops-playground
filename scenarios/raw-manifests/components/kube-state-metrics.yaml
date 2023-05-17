@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-state-metrics
+  namespace: argocd
+spec:
+  project: cluster-components
+  source:
+    chart: kube-state-metrics
+    repoURL: https://prometheus-community.github.io/helm-charts
+    targetRevision: 4.31.0
+    helm:
+      releaseName: kube-state-metrics
+      parameters:
+        - name: resources.limits.cpu
+          value: 100m
+        - name: resources.limits.memory
+          value: 64Mi
+        - name: resources.requests.cpu
+          value: 10m
+        - name: resoucres.requests.memory
+          value: 32Mi
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: kube-state-metrics
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -39,3 +39,10 @@ tasks:
       - echo "Your initial ArgoCD admin password is:"
       - kubectl get secret argocd-initial-admin-secret --context kind-{{ .cluster_name }} -n argocd -o jsonpath="{.data.password}" | base64 -d | xargs echo
     silent: true
+
+  scenario:manifests:
+    desc: Install the raw manifests scenario to argocd\
+    dir: scenarios/raw-manifests
+    cmds:
+      - kubectl apply --context kind-{{ .cluster_name }} -f application.yaml
+      
