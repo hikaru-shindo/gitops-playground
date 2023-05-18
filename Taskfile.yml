@@ -1,0 +1,41 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  cluster_name: argotest
+  port: 8080
+
+tasks:
+  cluster:create:
+    desc: Create a test cluster using kind
+    cmds:
+      - kind create cluster -n {{.cluster_name}}
+      - task: argo:install
+      - task: argo:password
+
+  cluster:delete:
+    desc: Delete the kind test cluster
+    cmds:
+      - kind delete cluster -n {{.cluster_name}}
+
+  argo:install:
+    desc: Install argocd to kind test cluster
+    dir: argocd
+    cmds:
+      - helm repo add argo https://argoproj.github.io/argo-helm
+      - helm repo update
+      - helm upgrade --kube-context kind-{{.cluster_name}} --install --wait --namespace argocd --create-namespace --values helm-values.yaml argocd argo/argo-cd
+      - kubectl apply --context kind-{{ .cluster_name }} -f networkpolicies.yaml
+
+  argo:forward:
+    desc: Forward the argocd UI to a local port
+    cmds:
+      - kubectl port-forward service/argocd-server --context kind-{{ .cluster_name }} -n argocd {{.port}}:443
+
+  argo:password:
+    desc: Get the initial admin password for argocd
+    cmds:
+      - echo "Your initial ArgoCD admin password is:"
+      - kubectl get secret argocd-initial-admin-secret --context kind-{{ .cluster_name }} -n argocd -o jsonpath="{.data.password}" | base64 -d | xargs echo
+    silent: true
