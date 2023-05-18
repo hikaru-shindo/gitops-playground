@@ -46,6 +46,12 @@ tasks:
     dir: scenarios/raw-manifests
     cmds:
       - kubectl apply --context kind-{{ .cluster_name }} -f application.yaml
+  
+  scenario:manifests-multisource:
+    desc: Install the raw manifests scenario with multiple sources to argocd
+    dir: scenarios/raw-manifests-multisource
+    cmds:
+      - kubectl apply --context kind-{{ .cluster_name }} -f application.yaml
 
   scenario:helm:
     desc: Install the helm chart scenario to argocd

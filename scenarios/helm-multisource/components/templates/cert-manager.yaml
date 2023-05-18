@@ -12,7 +12,7 @@ spec:
     helm:
       releaseName: cert-manager
       valueFiles: 
-      - $values/scenarios/helm-multisource/values/cert-manager.yaml
+      - $values/inventory/kind/cert-manager.yaml
   - repoURL: 'https://github.com/hikaru-shindo/argocd-playground.git'
     targetRevision: HEAD
     ref: values

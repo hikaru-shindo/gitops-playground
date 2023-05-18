@@ -27,3 +27,4 @@ The following software is required to test out the scenarios:
 |scenario:helm|Install the helm chart scenario to the given test cluster|cluster_name (default: argotest)|
 |scenario:helm-multisource|Install the helm chart scenario with seperate source for values to the given test cluster|cluster_name (default: argotest)|
 |scenario:manifests|Install the raw manifest scenario to the given test cluster|cluster_name (default: argotest)|
+|scenario:manifests-multisource|Install the raw manifest scenario with seperate source for values to the given test cluster|cluster_name (default: argotest)|

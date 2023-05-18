@@ -17,7 +17,7 @@ spec:
     targetRevision: HEAD
     ref: values
   destination:
-    server: "{{ .Values.spec.destination.server }}"
+    server: "https://kubernetes.default.svc"
     namespace: kube-state-metrics
   syncPolicy:
     automated:
