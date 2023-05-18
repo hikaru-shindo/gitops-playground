@@ -2,6 +2,10 @@
 
 This repository contains some test scenarios to setup a Kubernetes cluster from scratch in a local environment.
 
+*Important*
+Do not use anything you find in the repository in production. This is purely a testing playground!
+*Important*
+
 ## Prerequisites
 
 The following software is required to test out the scenarios:
