@@ -12,8 +12,8 @@ spec:
     helm:
       releaseName: reloader     
       valueFiles: 
-      - $values/inventory/kind/reloader.yaml
-  - repoURL: 'https://github.com/hikaru-shindo/argocd-playground.git'
+      - $values/{{ .Values.spec.source.values.path }}/reloader.yaml
+  - repoURL: {{ .Values.spec.source.values.repoURL | quote }}
     targetRevision: HEAD
     ref: values
   destination:

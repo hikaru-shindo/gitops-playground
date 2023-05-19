@@ -12,8 +12,8 @@ spec:
     helm:
       releaseName: kube-state-metrics
       valueFiles:
-      - $values/inventory/kind/kube-state-metrics.yaml
-  - repoURL: 'https://github.com/hikaru-shindo/argocd-playground.git'
+      - $values/{{ .Values.spec.source.values.path }}/kube-state-metrics.yaml
+  - repoURL: {{ .Values.spec.source.values.repoURL | quote }}
     targetRevision: HEAD
     ref: values
   destination:

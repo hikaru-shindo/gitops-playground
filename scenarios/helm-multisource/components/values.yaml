@@ -1,4 +1,7 @@
 spec:
   destination:
     server: https://kubernetes.default.svc
-  
+  source:
+    values:
+      repoURL: https://github.com/hikaru-shindo/argocd-playground.git
+      path: inventory/kind

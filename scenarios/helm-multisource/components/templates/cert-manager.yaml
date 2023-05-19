@@ -12,8 +12,8 @@ spec:
     helm:
       releaseName: cert-manager
       valueFiles: 
-      - $values/inventory/kind/cert-manager.yaml
-  - repoURL: 'https://github.com/hikaru-shindo/argocd-playground.git'
+      - $values/{{ .Values.spec.source.values.path }}/cert-manager.yaml
+  - repoURL: {{ .Values.spec.source.values.repoURL | quote }}
     targetRevision: HEAD
     ref: values
   destination:

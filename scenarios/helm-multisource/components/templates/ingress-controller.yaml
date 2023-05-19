@@ -12,8 +12,8 @@ spec:
     helm:
       releaseName: ingress-nginx
       valueFiles: 
-      - $values/inventory/kind/ingress-controller.yaml
-  - repoURL: 'https://github.com/hikaru-shindo/argocd-playground.git'
+      - $values/{{ .Values.spec.source.values.path }}/ingress-controller.yaml
+  - repoURL: {{ .Values.spec.source.values.repoURL | quote }}
     targetRevision: HEAD
     ref: values
   destination:
