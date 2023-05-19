@@ -1,0 +1,19 @@
+{{- range $name, $config := .Values.applications }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: "apps-{{ $name }}"
+  namespace: argocd
+spec:
+  project: system
+  source:
+{{ toYaml $config.source | indent 4 }}
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+{{- end }}

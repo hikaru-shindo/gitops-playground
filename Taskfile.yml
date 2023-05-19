@@ -64,3 +64,9 @@ tasks:
     dir: scenarios/helm-multisource
     cmds:
       - kubectl apply --context kind-{{ .cluster_name }} -f application.yaml
+
+  scenario:helm-multisource-full-bootstrap:
+    desc: Install the helm chart scenario with multiple sources and full cluster bootstrap to argocd
+    dir: scenarios/helm-multisource-full-bootstrap
+    cmds:
+      - kubectl apply --context kind-{{ .cluster_name }} -f application.yaml

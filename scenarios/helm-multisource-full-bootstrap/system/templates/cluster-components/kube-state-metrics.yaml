@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-state-metrics
+  namespace: argocd
+spec:
+  project: {{ .Values.spec.project }}
+  sources:
+  - chart: kube-state-metrics
+    repoURL: https://prometheus-community.github.io/helm-charts
+    targetRevision: 4.31.0
+    helm:
+      releaseName: kube-state-metrics
+      valueFiles:
+      - $values/{{ .Values.spec.source.values.path }}/kube-state-metrics.yaml
+  - repoURL: {{ .Values.spec.source.values.repoURL | quote }}
+    targetRevision: HEAD
+    ref: values
+  destination:
+    server: "{{ .Values.spec.destination.server }}"
+    namespace: kube-state-metrics
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
