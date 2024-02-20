@@ -1,0 +1,2 @@
+# Is created on "helm dep update ." but not needed in repo
+/argocd/argocd/argocd/charts

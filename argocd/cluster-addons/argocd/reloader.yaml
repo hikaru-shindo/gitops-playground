@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: reloader
+spec:
+  destination:
+    namespace: reloader
+    server: https://kubernetes.default.svc
+  project: cluster-addons
+  sources:
+    - chart: reloader
+      repoURL: https://stakater.github.io/stakater-charts
+      targetRevision: 1.0.67
+      helm:
+        releaseName: reloader
+        valueFiles: 
+        - $values/apps/reloader/values.yaml
+    - repoURL: http://scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/cluster-addons
+      targetRevision: main
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

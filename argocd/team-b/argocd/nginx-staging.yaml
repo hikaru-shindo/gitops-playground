@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nginx-staging
+  namespace: team-b-staging
+spec:
+  project: team-b
+  destination:
+    server: https://kubernetes.default.svc
+    # a namespace must be specified here, because teams are not allowed to deploy cluster-wide.
+    # You can specify a different namespace in the ressource YAMLs, if you are permitted to deploy in them
+    namespace: team-b-staging
+  source:
+    path: apps/nginx/staging
+    repoURL: http://scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/team-b
+    targetRevision: main
+    directory:
+      recurse: true
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

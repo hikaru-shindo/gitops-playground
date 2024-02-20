@@ -1,0 +1,9 @@
+service:
+  type: ClusterIP
+
+persistence:
+  size: 1Gi
+
+extraArgs: 
+  - -Dscm.initialPassword=gitops
+  - -Dscm.initialUser=gitops

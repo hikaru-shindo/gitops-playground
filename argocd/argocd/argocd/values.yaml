@@ -1,0 +1,61 @@
+# See possible values here: https://github.com/argoproj/argo-helm/blob/main/charts/argo-cd/values.yaml
+argo-cd:
+  global:
+    networkPolicy:
+      create: true
+      
+  configs:
+
+    # needed to enable deploying the Application ressource into other namespaces than argocd
+    # Unfortunately, as of argocd 2.6 this leads to failing notifications 
+    # https://github.com/argoproj/argo-cd/issues/11252
+    params:
+      application.namespaces: "*"
+
+    credentialTemplates:
+      scmm:
+        url: http://scm-manager.scm-manager.svc.cluster.local
+        username: gitops
+        password: gitops
+    repositories:
+      argocd:
+        name: argocd
+        url: http://scmm-scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/argocd
+      cluster-addons:
+        name: cluster-resources
+        url: http://scmm-scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/cluster-addons
+      team-a:
+        name: team-a
+        url: http://scmm-scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/team-a
+      team-b:
+        name: team-b
+        url: http://scmm-scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/team-b
+
+      bitnami:
+        name: bitnami
+        type: helm
+        url: https://raw.githubusercontent.com/bitnami/charts/archive-full-index/bitnami
+      prometheus:
+        name: prometheus-community
+        type: helm
+        url: https://prometheus-community.github.io/helm-charts
+      codecentric:
+        name: codecentric
+        type: helm
+        url: https://codecentric.github.io/helm-charts
+      jetstack:
+        name: jetstack
+        type: helm
+        url: https://charts.jetstack.io
+      ingress-nginx:
+        name: ingress-nginx
+        type: helm
+        url: https://kubernetes.github.io/ingress-nginx
+      stakater:
+        name: stakater
+        type: helm
+        url: https://stakater.github.io/stakater-charts
+      argo-helm-repo:
+        type: helm
+        url: https://argoproj.github.io/argo-helm
+        name: argocd
