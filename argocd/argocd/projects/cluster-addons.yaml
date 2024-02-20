@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: cluster-addons
+  # In a real-world scenario these might to into a separate namespace
+  namespace: argocd
+spec:
+  description: Contains basic addons for the cluster
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+  sourceRepos:
+  - http://scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/cluster-addons
+  - https://codecentric.github.io/helm-charts
+  - https://charts.external-secrets.io
+  - https://helm.releases.hashicorp.com
+  - https://prometheus-community.github.io/helm-charts
+  - https://charts.jetstack.io
+  - https://kubernetes.github.io/ingress-nginx
+  - https://stakater.github.io/stakater-charts
+
+  # allow to only see application resources from the specified namespace
+  sourceNamespaces:
+    - 'argocd'
+
+  # Allow all namespaced-scoped resources to be created
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  # Allow all cluster-scoped resources to be created
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'

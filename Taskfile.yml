@@ -3,70 +3,186 @@
 version: '3'
 
 vars:
-  cluster_name: argotest
-  port: 8080
+  cluster_name: gitops-test
 
 tasks:
   cluster:create:
-    desc: Create a test cluster using kind
+    vars:
+      cpus: '{{default "4" .cpus}}'
+      disk_size: '{{default "20000mb" .disk_size}}'
+    desc: Create a test cluster
     cmds:
-      - kind create cluster -n {{.cluster_name}}
+      - minikube start -p {{.cluster_name}} --cpus={{.cpus}} --disk-size='{{.disk_size}}'
+      - task: namespaces:create
+      - task: scm:install
       - task: argo:install
       - task: argo:password
 
   cluster:delete:
-    desc: Delete the kind test cluster
+    desc: Delete a test cluster
     cmds:
-      - kind delete cluster -n {{.cluster_name}}
+      - minikube delete -p {{.cluster_name}}
+
+  cluster:status:
+    desc: Show status of a test cluster
+    cmds:
+      - minikube status -p {{.cluster_name}}
+
+  namespaces:create:
+    internal: true
+    desc: Create initial team namespaces
+    cmds:
+      - kubectl create namespace team-a-production
+      - kubectl create namespace team-a-staging
+      - kubectl create namespace team-b-production
+      - kubectl create namespace team-b-staging
 
   argo:install:
-    desc: Install argocd to kind test cluster
-    dir: argocd
+    desc: Install argocd to test cluster
+    dir: argocd/argocd
     cmds:
-      - helm repo add argo https://argoproj.github.io/argo-helm
-      - helm repo update
-      - helm upgrade --kube-context kind-{{.cluster_name}} --install --wait --namespace argocd --create-namespace --values helm-values.yaml argocd argo/argo-cd
-      - kubectl apply --context kind-{{ .cluster_name }} -f networkpolicies.yaml
-      - kubectl apply --context kind-{{ .cluster_name }} -f projects.yaml
+      - helm dep build argocd/
+      - helm upgrade --kube-context {{.cluster_name}} --install --wait --namespace argocd --create-namespace argocd argocd/
+      - kubectl apply --context {{ .cluster_name }} -f projects/argocd.yaml
+      - kubectl apply --context {{ .cluster_name }} -f applications/bootstrap.yaml
 
   argo:forward:
+    vars:
+      port: '{{default "8080" .port}}'
     desc: Forward the argocd UI to a local port
     cmds:
-      - kubectl port-forward service/argocd-server --context kind-{{ .cluster_name }} -n argocd {{.port}}:443
+      - kubectl port-forward service/argocd-server --context {{ .cluster_name }} -n argocd {{.port}}:443
 
   argo:password:
     desc: Get the initial admin password for argocd
     cmds:
       - echo "Your initial ArgoCD admin password is:"
-      - kubectl get secret argocd-initial-admin-secret --context kind-{{ .cluster_name }} -n argocd -o jsonpath="{.data.password}" | base64 -d | xargs echo
+      - kubectl get secret argocd-initial-admin-secret --context {{ .cluster_name }} -n argocd -o jsonpath="{.data.password}" | base64 -d | xargs echo
     silent: true
 
-  scenario:manifests:
-    desc: Install the raw manifests scenario to argocd
-    dir: scenarios/raw-manifests
+  scm:install:
+    vars:
+      version: "2.48.3"
+    dir: scm-manager
+    desc: Install gitea to test cluster
     cmds:
-      - kubectl apply --context kind-{{ .cluster_name }} -f application.yaml
-  
-  scenario:manifests-multisource:
-    desc: Install the raw manifests scenario with multiple sources to argocd
-    dir: scenarios/raw-manifests-multisource
-    cmds:
-      - kubectl apply --context kind-{{ .cluster_name }} -f application.yaml
+      - helm repo add scm-manager https://packages.scm-manager.org/repository/helm-v2-releases/
+      - helm repo update
+      - helm upgrade --kube-context {{.cluster_name}} --version {{.version}} --install --wait --namespace scm-manager --create-namespace scm-manager --values values.yaml scm-manager/scm-manager
+      # Create repositories
+      - task: scm:create-repo
+        vars:
+          repo: "argocd"
+          description: "Repository for ArgoCD bootstrapping"
+      - task: scm:create-repo
+        vars:
+          repo: "cluster-addons"
+          description: "Repository for an infrastructure/plattform team"
+      - task: scm:create-repo
+        vars:
+          repo: "team-a"
+          description: "Repository for an imaginary team A"
+      - task: scm:create-repo
+        vars:
+          repo: "team-b"
+          description: "Repository for an imaginary team B"
+      # Fill the repositories with content
+      - task: scm:init-repo-from-source
+        vars:
+          repo: "gitops/argocd"
+          source_path: "argocd/argocd"
+      - task: scm:init-repo-from-source
+        vars:
+          repo: "gitops/cluster-addons"
+          source_path: "argocd/cluster-addons"
+      - task: scm:init-repo-from-source
+        vars:
+          repo: "gitops/team-a"
+          source_path: "argocd/team-a"
+      - task: scm:init-repo-from-source
+        vars:
+          repo: "gitops/team-b"
+          source_path: "argocd/team-b"        
+      # Install SCM plugins
+      - task: scm:install-plugin
+        vars:
+          plugin: "scm-review-plugin"      
+      - task: scm:install-plugin
+        vars:
+          plugin: "scm-code-editor-plugin"
+      - task: scm:install-plugin
+        vars:
+          plugin: "scm-editor-plugin"
+      - task: scm:install-plugin
+        vars:
+          plugin: "scm-activity-plugin"
+      - task: scm:install-plugin
+        vars:
+          plugin: "scm-el-plugin"
+      - task: scm:install-plugin
+        vars:
+          plugin: "scm-readme-plugin"
+      - task: scm:install-plugin
+        vars:
+          plugin: "scm-webhook-plugin"
+          restart: "true"
 
-  scenario:helm:
-    desc: Install the helm chart scenario to argocd
-    dir: scenarios/helm
+  scm:create-repo:
+    internal: true
+    desc: "Create a SCM repository"
+    vars:
+      repo: '{{default "" .repo}}'
+      description: '{{default "" .description}}'
+      namespace: '{{default "gitops" .namespace}}'
     cmds:
-      - kubectl apply --context kind-{{ .cluster_name }} -f application.yaml
+      - echo "Creating repository {{.namespace}}/{{.repo}} ..."
+      - |- 
+        kubectl run -it --rm --restart=Never --image=curlimages/curl repo-creator-{{.repo}} -- -i -s -o /dev/null -L --write-out '%{http_code}' \
+        -X POST -H "Content-Type: application/vnd.scmm-repository+json;v=2" \
+        --data "{\"name\":\"{{.repo}}\",\"namespace\":\"{{.namespace}}\",\"type\":\"git\",\"contact\":\"admin@mail.de\",\"description\":\"{{.description}}\",\"contextEntries\":{},\"_links\":{}}" \
+        http://gitops:gitops@scm-manager.scm-manager.svc.cluster.local/scm/api/v2/repositories
+    silent: true
 
-  scenario:helm-multisource:
-    desc: Install the helm chart scenario with multiple sources to argocd
-    dir: scenarios/helm-multisource
+  scm:install-plugin:
+    internal: true
+    desc: Install a SCM plugin
+    vars:
+      plugin: '{{default "" .plugin}}'
+      restart: '{{default "false" .restart}}'
     cmds:
-      - kubectl apply --context kind-{{ .cluster_name }} -f application.yaml
+      - echo "Installing plugin {{.plugin}}{{if eq .restart "true"}} and restarting{{end}} ..."
+      - |-
+        kubectl run -it --rm --restart=Never --image=curlimages/curl plugin-installer-{{.plugin}} -- -i -s -o /dev/null -L --write-out '%{http_code}' \
+        -X POST -H "accept: */*" --data "" \
+        http://gitops:gitops@scm-manager.scm-manager.svc.cluster.local/scm/api/v2/plugins/available/{{.plugin}}/install{{if eq .restart "true"}}?restart=true{{end}}
+    silent: true
 
-  scenario:helm-multisource-full-bootstrap:
-    desc: Install the helm chart scenario with multiple sources and full cluster bootstrap to argocd
-    dir: scenarios/helm-multisource-full-bootstrap
+  scm:init-repo-from-source:
+    internal: true
+    vars:
+      repo: '{{default "" .repo}}'
+      source_path: '{{default "" .source_path}}'
+      random_id:
+        sh: cat /dev/urandom | LC_ALL=C tr -dc 'a-f0-9' | fold -w 8 | head -n 1
+    desc: Initialize a SCM repository from local source
+   # silent: true
     cmds:
-      - kubectl apply --context kind-{{ .cluster_name }} -f application.yaml
+      - kubectl run --context {{ .cluster_name }} --image bitnami/git --command --restart=Never git-{{.random_id}} -- sleep 3600
+      - defer: kubectl delete pod git-{{.random_id}} --context {{ .cluster_name }}
+      - kubectl wait --context {{ .cluster_name }} --for=condition=ready pod git-{{.random_id}}
+      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git config --global user.email "scm@example.com"
+      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git config --global user.name "GitOps"
+      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git config --global init.defaultBranch main
+      - kubectl cp {{.source_path}} git-{{.random_id}}:/source
+      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git clone http://gitops:gitops@scm-manager.scm-manager.svc.cluster.local/scm/repo/{{.repo}} /repo
+      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- sh -c 'cp -r /source/* /repo'
+      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git -C /repo add . 
+      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git -C /repo commit -m "Initialise {{ .repo }}" 
+      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git -C /repo push
+
+  scm:forward:
+    vars:
+      port: '{{default "8081" .port}}'
+    desc: Forward the gitea UI to a local port
+    cmds:
+      - kubectl port-forward service/scm-manager --context {{ .cluster_name }} -n scm-manager {{.port}}:80

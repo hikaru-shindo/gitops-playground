@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-state-metrics
+spec:
+  destination:
+    namespace: kube-state-metrics
+    server: https://kubernetes.default.svc
+  project: cluster-addons
+  sources:
+    - chart: kube-state-metrics
+      repoURL: https://prometheus-community.github.io/helm-charts
+      targetRevision: 5.16.0
+      helm:
+        releaseName: kube-state-metrics
+        valueFiles: 
+        - $values/apps/kube-state-metrics/values.yaml
+    - repoURL: http://scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/cluster-addons
+      targetRevision: main
+      ref: values
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

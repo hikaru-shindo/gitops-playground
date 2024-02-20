@@ -1,0 +1,47 @@
+# this misc-Application manages all resources in the misc folder in the gitops repository
+# use the misc folder to deploy resources, which are needed for multiple other apps such as ServiceAccounts or shared ConfigMaps
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: misc-production
+  namespace: team-a-production
+spec:
+  project: team-a
+  destination:
+    server: https://kubernetes.default.svc
+    # a namespace must be specified here, because teams are not allowed to deploy cluster-wide.
+    # You can specify a different namespace in the ressource YAMLs, if you are permitted to deploy in them
+    namespace: team-a-production
+  source:
+    path: misc/production
+    repoURL: http://scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/team-a
+    targetRevision: main
+    directory:
+      recurse: true
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: misc-staging
+  namespace: team-a-staging
+spec:
+  project: team-a
+  destination:
+    server: https://kubernetes.default.svc
+    # a namespace must be specified here, because teams are not allowed to deploy cluster-wide.
+    # You can specify a different namespace in the ressource YAMLs, if you are permitted to deploy in them
+    namespace: team-a-staging
+  source:
+    path: misc/production
+    repoURL: http://scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/team-a
+    targetRevision: main
+    directory:
+      recurse: true
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
