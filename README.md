@@ -3,7 +3,7 @@
 This repository contains some examples to setup a local Kubernetes GitOps test environment.
 
 **Important**  
-Do not use anything you find in the repository in production. This is purely a testing playground!
+Do not use anything you find in the repository in production. This is purely a testing playground!  
 **Important**
 
 ## Prerequisites
