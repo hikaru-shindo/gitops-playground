@@ -6,27 +6,58 @@ vars:
   cluster_name: gitops-test
 
 tasks:
+  default:
+    cmds:
+      - task: cluster:status
+
   cluster:create:
     vars:
       cpus: '{{default "4" .cpus}}'
       disk_size: '{{default "20000mb" .disk_size}}'
+      enable_argo: '{{default "true" .enable_argo}}'
+      enable_flux: '{{default "true" .enable_flux}}'
+      flux_version: '{{default "v2.2.3" .flux_version}}'
+      scmm_version: '{{default "2.48.3" .scmm_version}}'
+      kubernetes_version: '{{default "1.29.2" .kubernetes_version}}'
+    preconditions:
+      - sh: minikube version
+        msg: minikube is not installed
+      - sh: kubectl version --client
+        msg: kubectl is not installed
+      - sh: helm version
+        msg: Helm is not installed
     desc: Create a test cluster
+    status:
+      - minikube status -p {{.cluster_name}}
     cmds:
-      - minikube start -p {{.cluster_name}} --cpus={{.cpus}} --disk-size='{{.disk_size}}'
+      - cmd: |-
+          echo "ArgoCD: see argocd/argocd/argocd/Chart.yaml (enabled: {{.enable_argo}})"
+          echo "FluxCD: {{.flux_version}} (enabled: {{.enable_flux}}) "
+          echo "SCM Manager: {{.scmm_version}}"
+        silent: true
+      - minikube start -p {{.cluster_name}} --cpus={{.cpus}} --disk-size='{{.disk_size}}' --kubernetes-version={{.kubernetes_version}}
       - task: namespaces:create
       - task: scm:install
+        vars:
+          version: '{{.scmm_version}}'
+      - task: flux:install
+        vars:
+          enabled: '{{.enable_flux}}'
+          version: '{{.flux_version}}'
       - task: argo:install
-      - task: argo:password
+        vars:
+          enabled: '{{.enable_argo}}'
 
   cluster:delete:
     desc: Delete a test cluster
+    prompt: This will destroy your {{.cluster_name}} playground. Are you sure?
     cmds:
       - minikube delete -p {{.cluster_name}}
 
   cluster:status:
     desc: Show status of a test cluster
     cmds:
-      - minikube status -p {{.cluster_name}}
+      - minikube status -p {{.cluster_name}} || true
 
   namespaces:create:
     internal: true
@@ -37,14 +68,67 @@ tasks:
       - kubectl create namespace team-b-production
       - kubectl create namespace team-b-staging
 
+  flux:install:
+    internal: true
+    desc: Install flux to test cluster
+    vars:
+      enabled: '{{default "true" .enabled}}'
+      version: '{{default "latest" .version}}'
+    status:
+      - 'test "{{.enabled}}" != "true"'
+    cmds:
+      - kubectl apply --context {{.cluster_name}} -f https://github.com/fluxcd/flux2/releases/download/{{ .version }}/install.yaml
+      - kubectl get deploy --context {{.cluster_name}} --output name -n flux-system | xargs -n1 -t kubectl rollout status --context {{.cluster_name}} -n flux-system
+    
   argo:install:
+    internal: true
     desc: Install argocd to test cluster
     dir: argocd/argocd
+    vars:
+      enabled: '{{default "true" .enabled}}'
+    status:
+      - '[ "{{.enabled}}" != "true" ] || helm status --kube-context {{.cluster_name}} -n argocd argocd'
     cmds:
       - helm dep build argocd/
       - helm upgrade --kube-context {{.cluster_name}} --install --wait --namespace argocd --create-namespace argocd argocd/
+      - task: argo:password
+
+  argo:init:
+    desc: Initialise argocd for usage
+    dir: argocd/argocd
+    preconditions:
+      - sh: helm status -n argocd argocd --kube-context {{.cluster_name}}
+        msg: ArgoCD is not currently installed on the test cluster {{.cluster_name}}
+    cmds:
       - kubectl apply --context {{ .cluster_name }} -f projects/argocd.yaml
       - kubectl apply --context {{ .cluster_name }} -f applications/bootstrap.yaml
+      - for:
+        - '{"repo": "argocd", "description": "Repository for ArgoCD bootstrapping"}'
+        - '{"repo": "cluster-addons", "description": "Repository for an infrastructure/plattform team"}'
+        - '{"repo": "team-a", "description": "Repository for an imaginary team A"}'
+        - '{"repo": "team-b", "description": "Repository for an imaginary team A"}'
+        task: scm:create-repo
+        vars:
+          repo:  '{{(.ITEM | mustFromJson).repo | mustToJson}}'
+          description:  '{{(.ITEM | mustFromJson).repo | mustToJson}}'
+      - for:
+        - '{"repo": "gitops/argocd", "source_path": "argocd/argocd"}'
+        - '{"repo": "gitops/cluster-addons", "source_path": "argocd/cluster-addons"}'
+        - '{"repo": "gitops/team-a", "source_path": "argocd/team-a"}'
+        - '{"repo": "gitops/team-b", "source_path": "argocd/team-b"}'
+        task: scm:init-repo-from-source
+        vars:
+          repo:  '{{(.ITEM | mustFromJson).repo | mustToJson}}'
+          source_path:  '{{(.ITEM | mustFromJson).source_path | mustToJson}}'
+
+  flux:init:
+    desc: Initialise flux2 for usage
+    preconditions:
+      - sh: kubectl --context {{ .cluster_name }} get namespace flux-system
+        msg: FluxCD is not currently installed on the test cluster {{.cluster_name}}
+    cmds:
+      - cmd: echo "Not yet implemented, sorry 😢 ..."
+        silent: true
 
   argo:forward:
     vars:
@@ -61,71 +145,27 @@ tasks:
     silent: true
 
   scm:install:
+    internal: true
     vars:
-      version: "2.48.3"
+      version: '{{default "2.48.3" .version}}'
     dir: scm-manager
     desc: Install gitea to test cluster
     cmds:
       - helm repo add scm-manager https://packages.scm-manager.org/repository/helm-v2-releases/
       - helm repo update
       - helm upgrade --kube-context {{.cluster_name}} --version {{.version}} --install --wait --namespace scm-manager --create-namespace scm-manager --values values.yaml scm-manager/scm-manager
-      # Create repositories
-      - task: scm:create-repo
+      - for:
+        - '{"plugin": "scm-review-plugin"}'
+        - '{"plugin": "scm-code-editor-plugin"}'
+        - '{"plugin": "scm-editor-plugin"}'
+        - '{"plugin": "scm-activity-plugin"}'
+        - '{"plugin": "scm-el-plugin"}'
+        - '{"plugin": "scm-readme-plugin"}'
+        - '{"plugin": "scm-webhook-plugin", "restart": "true"}'
+        task: scm:install-plugin
         vars:
-          repo: "argocd"
-          description: "Repository for ArgoCD bootstrapping"
-      - task: scm:create-repo
-        vars:
-          repo: "cluster-addons"
-          description: "Repository for an infrastructure/plattform team"
-      - task: scm:create-repo
-        vars:
-          repo: "team-a"
-          description: "Repository for an imaginary team A"
-      - task: scm:create-repo
-        vars:
-          repo: "team-b"
-          description: "Repository for an imaginary team B"
-      # Fill the repositories with content
-      - task: scm:init-repo-from-source
-        vars:
-          repo: "gitops/argocd"
-          source_path: "argocd/argocd"
-      - task: scm:init-repo-from-source
-        vars:
-          repo: "gitops/cluster-addons"
-          source_path: "argocd/cluster-addons"
-      - task: scm:init-repo-from-source
-        vars:
-          repo: "gitops/team-a"
-          source_path: "argocd/team-a"
-      - task: scm:init-repo-from-source
-        vars:
-          repo: "gitops/team-b"
-          source_path: "argocd/team-b"        
-      # Install SCM plugins
-      - task: scm:install-plugin
-        vars:
-          plugin: "scm-review-plugin"      
-      - task: scm:install-plugin
-        vars:
-          plugin: "scm-code-editor-plugin"
-      - task: scm:install-plugin
-        vars:
-          plugin: "scm-editor-plugin"
-      - task: scm:install-plugin
-        vars:
-          plugin: "scm-activity-plugin"
-      - task: scm:install-plugin
-        vars:
-          plugin: "scm-el-plugin"
-      - task: scm:install-plugin
-        vars:
-          plugin: "scm-readme-plugin"
-      - task: scm:install-plugin
-        vars:
-          plugin: "scm-webhook-plugin"
-          restart: "true"
+          plugin:  '{{(.ITEM | mustFromJson).plugin | mustToJson}}'
+          restart:  '{{(.ITEM | mustFromJson).restart | mustToJson}}'
 
   scm:create-repo:
     internal: true
