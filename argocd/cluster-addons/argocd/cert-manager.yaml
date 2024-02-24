@@ -15,7 +15,7 @@ spec:
         releaseName: cert-manager
         valueFiles: 
         - $values/apps/cert-manager/values.yaml
-    - repoURL: http://scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/cluster-addons
+    - repoURL: http://gitea-http.gitea.svc.cluster.local/argocd/cluster-addons.git
       targetRevision: main
       ref: values
   syncPolicy:

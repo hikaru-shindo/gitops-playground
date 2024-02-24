@@ -14,22 +14,22 @@ argo-cd:
 
     credentialTemplates:
       scmm:
-        url: http://scm-manager.scm-manager.svc.cluster.local
-        username: gitops
-        password: gitops
+        url: http://gitea-http.gitea.svc.cluster.local
+        username: argocd
+        password: argocd
     repositories:
       argocd:
         name: argocd
-        url: http://scmm-scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/argocd
+        url: http://gitea-http.gitea.svc.cluster.local/argocd/argocd.git
       cluster-addons:
         name: cluster-resources
-        url: http://scmm-scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/cluster-addons
+        url: http://gitea-http.gitea.svc.cluster.local/argocd/cluster-addons.git
       team-a:
         name: team-a
-        url: http://scmm-scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/team-a
+        url: http://gitea-http.gitea.svc.cluster.local/argocd/argocd/team-a.git
       team-b:
         name: team-b
-        url: http://scmm-scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/team-b
+        url: http://gitea-http.gitea.svc.cluster.local/argocd/team-b.git
 
       bitnami:
         name: bitnami

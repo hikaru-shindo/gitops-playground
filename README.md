@@ -18,30 +18,41 @@ The following software is required to test out the scenarios:
 ## Gettings started
 
 * Create a test cluster with `task cluster:create`
-* Bind the ArgoCD UI and the SCM Manager to your machine with `task argo:forward` and `task scm:forward`
-* Start using it 🎉
+* Bind the ArgoCD UI and Gitea to your machine with `task argo:forward` and `task scm:forward`
+* Initialise either ArgoCD (`task argo:init`) or FluxCD (`task flux:init`) to apply the example suite to the cluster
+* Start experimenting 🎉
 
 ### Credentials
 
 |Service|Username|Password|
 |--|--|--|
 |ArgoCD|admin|Printed after creation of cluster, can also be retrieved with `task argo:password` later|
-|SCM Manager|gitops|gitops|
+|Gitea Admin|gitops|gitops|
+|Gitea ArgoCD|argocd|argocd|
+|Gitea FluxCD|fluxcd|fluxcd|
 
 ## Integrated SCM
 
-This playground includes an SCM manager so you can create local repositories and connect them to your GitOps operator
+This playground includes Gitea so you can create local repositories and connect them to your GitOps operator
 and to change the default example applications created and deployed to the cluster.
 
 You may forward the SCM to your local system using `task scm:forward` and access it under http://localhost:8081.
 
-You may login using the user `gitops` and the password `gitops`.
+You may login using the user `gitops` and the password `gitops` as the admin user has access to all repositories.
+
+### SSH
+
+If you want to be able to use SSH with your git client and the integrated Gitea you need to do a few things:
+
+* Upload your SSH public key to the Gitea instance via the UI
+* Bind the Gitea SSH port to a port on your machine with `kubectl port-forward --context gitops-test -n gitea service/gitea-ssh 2222:ssh`
+* Use the bound port for your clone / push commands
 
 ### Example repositories
 
 #### ArgoCD
 
-##### gitops/argocd
+##### argocd/argocd
 
 This repository contains the default ArgoCD bootstrap files.
 This is used to install ArgoCD to the cluster.
@@ -56,7 +67,7 @@ Be aware that the `argocd` chart itself will from then on be managed by ArgoCD i
 * argocd - Contains an ArgoCD wrapper chart to install the operator
 * projects - Contains all the ArgoCD projects to be created
 
-##### gitops/cluster-addons
+##### argocd/cluster-addons
 
 This repository contains a more normal GitOps layout which installs all the cluster addons (ingress controller, cert manager, 
 other operators, ...) and could be owned by a platform team.
@@ -67,7 +78,7 @@ other operators, ...) and could be owned by a platform team.
 * argocd - Contains all the required ArgoCD manifests (mainly the `Application` resources)
 * misc - Contains miscellaneous manifests which don't belong to any application (eg. shared `ConfigMap`s, `NetworkPolicies`, ...)
 
-##### gitops/team-a and gitops/team-b
+##### argocd/team-a and argocd/team-b
 
 Those repositories contain a more normal GitOps layout and represents different teams deploying end-user applications.
 
@@ -95,7 +106,6 @@ Create a new test cluster
 |enable_argo|true|
 |enable_flux|true|
 |flux_version|v2.2.3|
-|scmm_version|2.48.3|
 |kubernetes_version|1.29.2|
 
 ### cluster:delete
@@ -116,7 +126,8 @@ Show the current status of the test cluster
 
 ### argo:init
 
-Initialise sample repositories in SCM manager for ArgoCD and configure the operator to pull those changes.
+Configure ArgoCD with the sample repositories from Gitea to apply the desired state to the cluster.  
+**Warning** Do not apply at the same time as FluxCD - this could cause things to break.
 
 |Parameter|Default|
 |--|--|
@@ -141,7 +152,8 @@ Print the initial ArgoCD admin password in a given test cluster
 
 ### flux:init
 
-Initialise sample repositories in SCM manager for FluxCD and configure the operator to pull those changes.
+Configure FluxCD with the sample repositories from Gitea to apply the desired state to the cluster.  
+**Warning** Do not apply at the same time as ArgoCD - this could cause things to break.
 
 |Parameter|Default|
 |--|--|
@@ -149,7 +161,7 @@ Initialise sample repositories in SCM manager for FluxCD and configure the opera
 
 ### scm:forward
 
-Forward the SCM Manager HTTP service in a given test cluster to a local port
+Forward Gitea HTTP service in a given test cluster to a local port
 
 |Parameter|Default|
 |--|--|

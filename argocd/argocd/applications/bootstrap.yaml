@@ -14,7 +14,7 @@ spec:
   project: argocd
   source:
     path: applications/
-    repoURL: http://scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/argocd
+    repoURL: http://gitea-http.gitea.svc.cluster.local/argocd/argocd.git
     targetRevision: main
     directory:
       recurse: true

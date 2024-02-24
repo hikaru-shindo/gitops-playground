@@ -17,7 +17,6 @@ tasks:
       enable_argo: '{{default "true" .enable_argo}}'
       enable_flux: '{{default "true" .enable_flux}}'
       flux_version: '{{default "v2.2.3" .flux_version}}'
-      scmm_version: '{{default "2.48.3" .scmm_version}}'
       kubernetes_version: '{{default "1.29.2" .kubernetes_version}}'
     preconditions:
       - sh: minikube version
@@ -33,13 +32,12 @@ tasks:
       - cmd: |-
           echo "ArgoCD: see argocd/argocd/argocd/Chart.yaml (enabled: {{.enable_argo}})"
           echo "FluxCD: {{.flux_version}} (enabled: {{.enable_flux}}) "
-          echo "SCM Manager: {{.scmm_version}}"
+          echo "Gitea: see gitea/Chart.yaml"
         silent: true
       - minikube start -p {{.cluster_name}} --cpus={{.cpus}} --disk-size='{{.disk_size}}' --kubernetes-version={{.kubernetes_version}}
       - task: namespaces:create
       - task: scm:install
-        vars:
-          version: '{{.scmm_version}}'
+      - task: scm:init
       - task: flux:install
         vars:
           enabled: '{{.enable_flux}}'
@@ -102,24 +100,6 @@ tasks:
     cmds:
       - kubectl apply --context {{ .cluster_name }} -f projects/argocd.yaml
       - kubectl apply --context {{ .cluster_name }} -f applications/bootstrap.yaml
-      - for:
-        - '{"repo": "argocd", "description": "Repository for ArgoCD bootstrapping"}'
-        - '{"repo": "cluster-addons", "description": "Repository for an infrastructure/plattform team"}'
-        - '{"repo": "team-a", "description": "Repository for an imaginary team A"}'
-        - '{"repo": "team-b", "description": "Repository for an imaginary team A"}'
-        task: scm:create-repo
-        vars:
-          repo:  '{{(.ITEM | mustFromJson).repo | mustToJson}}'
-          description:  '{{(.ITEM | mustFromJson).repo | mustToJson}}'
-      - for:
-        - '{"repo": "gitops/argocd", "source_path": "argocd/argocd"}'
-        - '{"repo": "gitops/cluster-addons", "source_path": "argocd/cluster-addons"}'
-        - '{"repo": "gitops/team-a", "source_path": "argocd/team-a"}'
-        - '{"repo": "gitops/team-b", "source_path": "argocd/team-b"}'
-        task: scm:init-repo-from-source
-        vars:
-          repo:  '{{(.ITEM | mustFromJson).repo | mustToJson}}'
-          source_path:  '{{(.ITEM | mustFromJson).source_path | mustToJson}}'
 
   flux:init:
     desc: Initialise flux2 for usage
@@ -135,7 +115,7 @@ tasks:
       port: '{{default "8080" .port}}'
     desc: Forward the argocd UI to a local port
     cmds:
-      - kubectl port-forward service/argocd-server --context {{ .cluster_name }} -n argocd {{.port}}:443
+      - kubectl port-forward service/argocd-server --context {{ .cluster_name }} -n argocd {{.port}}:https
 
   argo:password:
     desc: Get the initial admin password for argocd
@@ -146,83 +126,103 @@ tasks:
 
   scm:install:
     internal: true
-    vars:
-      version: '{{default "2.48.3" .version}}'
-    dir: scm-manager
+    dir: gitea/
     desc: Install gitea to test cluster
     cmds:
-      - helm repo add scm-manager https://packages.scm-manager.org/repository/helm-v2-releases/
-      - helm repo update
-      - helm upgrade --kube-context {{.cluster_name}} --version {{.version}} --install --wait --namespace scm-manager --create-namespace scm-manager --values values.yaml scm-manager/scm-manager
-      - for:
-        - '{"plugin": "scm-review-plugin"}'
-        - '{"plugin": "scm-code-editor-plugin"}'
-        - '{"plugin": "scm-editor-plugin"}'
-        - '{"plugin": "scm-activity-plugin"}'
-        - '{"plugin": "scm-el-plugin"}'
-        - '{"plugin": "scm-readme-plugin"}'
-        - '{"plugin": "scm-webhook-plugin", "restart": "true"}'
-        task: scm:install-plugin
-        vars:
-          plugin:  '{{(.ITEM | mustFromJson).plugin | mustToJson}}'
-          restart:  '{{(.ITEM | mustFromJson).restart | mustToJson}}'
-
-  scm:create-repo:
+      - helm dep build ./
+      - helm upgrade --kube-context {{.cluster_name}} --install --wait --namespace gitea --create-namespace gitea ./
+  
+  scm:init:
     internal: true
-    desc: "Create a SCM repository"
+    desc: Initialise gitea users and repositories
+    preconditions:
+      - sh: helm status -n gitea gitea --kube-context {{.cluster_name}}
+        msg: Gitea is not currently installed on the test cluster {{.cluster_name}}
+    cmds:
+      - for:
+        - '{"username": "argocd", "password": "argocd"}'
+        - '{"username": "fluxcd", "password": "fluxcd"}'
+        task: scm:create-user
+        vars:
+          username: '{{(.ITEM | mustFromJson).username | mustToJson}}'
+          password: '{{(.ITEM | mustFromJson).password | mustToJson}}'
+      - for:
+        - '{"owner": "argocd", "repo": "argocd", "source_path": "argocd/argocd", "description": "Repository for ArgoCD bootstrapping"}'
+        - '{"owner": "argocd", "repo": "cluster-addons", "source_path": "argocd/cluster-addons", "description": "Repository for an infrastructure/plattform team"}'
+        - '{"owner": "argocd", "repo": "team-a", "source_path": "argocd/team-a", "description": "Repository for an imaginary team A"}'
+        - '{"owner": "argocd", "repo": "team-b", "source_path": "argocd/team-b", "description": "Repository for an imaginary team B"}'
+        task: scm:import-repo
+        vars:
+          owner:  '{{(.ITEM | mustFromJson).owner }}'
+          repo:  '{{(.ITEM | mustFromJson).repo }}'
+          source_path:  '{{(.ITEM | mustFromJson).source_path }}'
+          description:  '{{(.ITEM | mustFromJson).description }}'
+
+  scm:create-user:
+    internal: true
+    desc: "Create a SCM user"
     vars:
+      username: '{{default "" .username}}'
+      password: '{{default "" .password}}'
+      pod_name:
+        sh: kubectl --context {{.cluster_name}} -n gitea get po -o jsonpath='{.items[].metadata.name}' -l 'app.kubernetes.io/name=gitea'
+    requires:
+      vars:
+        - username
+        - password
+    cmds: 
+      - echo "Creating user {{.username}} ..."
+      - |-
+        kubectl exec --context {{ .cluster_name }} -n gitea {{.pod_name}} -c gitea -- gitea admin user create \
+          --username "{{.username}}" \
+          --password "{{.password}}" \
+          --email "{{.username}}@gitea.cluster.local" \
+          --must-change-password=false
+    silent: true
+  
+  scm:import-repo:
+    internal: true
+    desc: "Import a SCM repository"
+    vars:
+      owner: '{{default "" .owner}}'
       repo: '{{default "" .repo}}'
       description: '{{default "" .description}}'
-      namespace: '{{default "gitops" .namespace}}'
-    cmds:
-      - echo "Creating repository {{.namespace}}/{{.repo}} ..."
-      - |- 
-        kubectl run -it --rm --restart=Never --image=curlimages/curl repo-creator-{{.repo}} -- -i -s -o /dev/null -L --write-out '%{http_code}' \
-        -X POST -H "Content-Type: application/vnd.scmm-repository+json;v=2" \
-        --data "{\"name\":\"{{.repo}}\",\"namespace\":\"{{.namespace}}\",\"type\":\"git\",\"contact\":\"admin@mail.de\",\"description\":\"{{.description}}\",\"contextEntries\":{},\"_links\":{}}" \
-        http://gitops:gitops@scm-manager.scm-manager.svc.cluster.local/scm/api/v2/repositories
-    silent: true
-
-  scm:install-plugin:
-    internal: true
-    desc: Install a SCM plugin
-    vars:
-      plugin: '{{default "" .plugin}}'
-      restart: '{{default "false" .restart}}'
-    cmds:
-      - echo "Installing plugin {{.plugin}}{{if eq .restart "true"}} and restarting{{end}} ..."
-      - |-
-        kubectl run -it --rm --restart=Never --image=curlimages/curl plugin-installer-{{.plugin}} -- -i -s -o /dev/null -L --write-out '%{http_code}' \
-        -X POST -H "accept: */*" --data "" \
-        http://gitops:gitops@scm-manager.scm-manager.svc.cluster.local/scm/api/v2/plugins/available/{{.plugin}}/install{{if eq .restart "true"}}?restart=true{{end}}
-    silent: true
-
-  scm:init-repo-from-source:
-    internal: true
-    vars:
-      repo: '{{default "" .repo}}'
       source_path: '{{default "" .source_path}}'
-      random_id:
-        sh: cat /dev/urandom | LC_ALL=C tr -dc 'a-f0-9' | fold -w 8 | head -n 1
-    desc: Initialize a SCM repository from local source
-   # silent: true
+      pod_name:
+        sh: kubectl --context {{.cluster_name}} -n gitea get po -o jsonpath='{.items[].metadata.name}' -l 'app.kubernetes.io/name=gitea'
+      temp_dir:
+        # echo is used for cache busting, otherwise variable always be the same
+        sh: echo "{{.owner}}/{{.repo}}" > /dev/null && mktemp -d
+    requires:
+      vars:
+        - owner
+        - repo
+        - source_path
     cmds:
-      - kubectl run --context {{ .cluster_name }} --image bitnami/git --command --restart=Never git-{{.random_id}} -- sleep 3600
-      - defer: kubectl delete pod git-{{.random_id}} --context {{ .cluster_name }}
-      - kubectl wait --context {{ .cluster_name }} --for=condition=ready pod git-{{.random_id}}
-      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git config --global user.email "scm@example.com"
-      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git config --global user.name "GitOps"
-      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git config --global init.defaultBranch main
-      - kubectl cp {{.source_path}} git-{{.random_id}}:/source
-      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git clone http://gitops:gitops@scm-manager.scm-manager.svc.cluster.local/scm/repo/{{.repo}} /repo
-      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- sh -c 'cp -r /source/* /repo'
-      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git -C /repo add . 
-      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git -C /repo commit -m "Initialise {{ .repo }}" 
-      - kubectl exec --context {{ .cluster_name }} git-{{.random_id}} -- git -C /repo push
+      - defer: rm -rf {{.temp_dir}}
+      - echo "Creating repository {{.owner}}/{{.repo}} ..."
+      - |-
+        kubectl exec --context {{ .cluster_name }} -n gitea {{.pod_name}} -c gitea -- curl http://localhost:3000/api/v1/admin/users/{{.owner}}/repos \
+          --user gitops:gitops \
+          -X POST \
+          -H "Content-Type: application/json" \
+          -d '{"name": "{{.repo}}", "default_branch": "main", "description": "{{.description}}", "private": true}' \
+          -o /dev/null \
+          --silent \
+          --fail
+      - echo "Preparing repository {{.owner}}/{{.repo}} for import ..."
+      - cp -a {{.source_path}} {{.temp_dir}}/repo
+      - git -C {{.temp_dir}}/repo init --initial-branch=main {{.temp_dir}}/repo
+      - git -C {{.temp_dir}}/repo add -A
+      - git -C {{.temp_dir}}/repo commit -m "Initialise {{.owner}}/{{.repo}} ..."
+      - echo "Importing repository {{.owner}}/{{.repo}} ..."
+      - kubectl exec --context {{ .cluster_name }} -n gitea {{.pod_name}} -c gitea -- rm -rf /data/git/gitea-repositories/{{.owner}}/{{.repo}}.git
+      - kubectl cp -n gitea -c gitea {{.temp_dir}}/repo/.git {{.pod_name}}:/data/git/gitea-repositories/{{.owner}}/{{.repo}}.git
+    silent: true
 
   scm:forward:
     vars:
       port: '{{default "8081" .port}}'
     desc: Forward the gitea UI to a local port
     cmds:
-      - kubectl port-forward service/scm-manager --context {{ .cluster_name }} -n scm-manager {{.port}}:80
+      - kubectl port-forward service/gitea-http --context {{ .cluster_name }} -n gitea {{.port}}:http

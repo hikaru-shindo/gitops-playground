@@ -14,7 +14,7 @@ spec:
     namespace: team-a-production
   source:
     path: misc/production
-    repoURL: http://scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/team-b
+    repoURL: http://gitea-http.gitea.svc.cluster.local/argocd/team-b.git
     targetRevision: main
     directory:
       recurse: true
@@ -37,7 +37,7 @@ spec:
     namespace: team-b-staging
   source:
     path: misc/production
-    repoURL: http://scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/team-b
+    repoURL: http://gitea-http.gitea.svc.cluster.local/argocd/team-b.git
     targetRevision: main
     directory:
       recurse: true

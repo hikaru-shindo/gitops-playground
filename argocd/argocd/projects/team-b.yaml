@@ -11,7 +11,7 @@ spec:
   - namespace: team-b-production
     server: https://kubernetes.default.svc
   sourceRepos:
-  - http://scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/team-b
+  - http://gitea-http.gitea.svc.cluster.local/argocd/team-b.git
   - https://github.com/argoproj/argocd-example-apps.git
   
   # allow to only see application resources from the specified namespace

@@ -12,7 +12,7 @@ spec:
     namespace: team-b-production
   source:
     path: apps/nginx/production
-    repoURL: http://scm-manager.scm-manager.svc.cluster.local/scm/repo/gitops/team-b
+    repoURL: http://gitea-http.gitea.svc.cluster.local/argocd/team-b.git
     targetRevision: main
     directory:
       recurse: true
