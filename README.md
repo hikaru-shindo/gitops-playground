@@ -105,7 +105,6 @@ Create a new test cluster
 |disk_size|20000mb|
 |enable_argo|true|
 |enable_flux|true|
-|flux_version|v2.2.3|
 |kubernetes_version|1.29.2|
 
 ### cluster:delete

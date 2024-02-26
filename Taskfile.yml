@@ -16,7 +16,6 @@ tasks:
       disk_size: '{{default "20000mb" .disk_size}}'
       enable_argo: '{{default "true" .enable_argo}}'
       enable_flux: '{{default "true" .enable_flux}}'
-      flux_version: '{{default "v2.2.3" .flux_version}}'
       kubernetes_version: '{{default "1.29.2" .kubernetes_version}}'
     preconditions:
       - sh: minikube version
@@ -30,9 +29,9 @@ tasks:
       - minikube status -p {{.cluster_name}}
     cmds:
       - cmd: |-
-          echo "ArgoCD: see argocd/argocd/argocd/Chart.yaml (enabled: {{.enable_argo}})"
-          echo "FluxCD: {{.flux_version}} (enabled: {{.enable_flux}}) "
-          echo "Gitea: see gitea/Chart.yaml"
+          echo "ArgoCD (enabled: {{.enable_argo}})"
+          echo "FluxCD (enabled: {{.enable_flux}})"
+          echo "Gitea (enabled: true)"
         silent: true
       - minikube start -p {{.cluster_name}} --cpus={{.cpus}} --disk-size='{{.disk_size}}' --kubernetes-version={{.kubernetes_version}}
       - task: namespaces:create
@@ -41,7 +40,6 @@ tasks:
       - task: flux:install
         vars:
           enabled: '{{.enable_flux}}'
-          version: '{{.flux_version}}'
       - task: argo:install
         vars:
           enabled: '{{.enable_argo}}'
@@ -71,11 +69,12 @@ tasks:
     desc: Install flux to test cluster
     vars:
       enabled: '{{default "true" .enabled}}'
-      version: '{{default "latest" .version}}'
+      # renovate: datasource=github-releases depName=fluxcd/flux2
+      flux_version: "v2.2.3"
     status:
       - 'test "{{.enabled}}" != "true"'
     cmds:
-      - kubectl apply --context {{.cluster_name}} -f https://github.com/fluxcd/flux2/releases/download/{{ .version }}/install.yaml
+      - kubectl apply --context {{.cluster_name}} -f https://github.com/fluxcd/flux2/releases/download/{{ .flux_version }}/install.yaml
       - kubectl get deploy --context {{.cluster_name}} --output name -n flux-system | xargs -n1 -t kubectl rollout status --context {{.cluster_name}} -n flux-system
     
   argo:install:
