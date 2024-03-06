@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "flux.fullname" . }}-cli
+  labels:
+    {{- include "flux.labels" . | nindent 4 }}
+spec:
+  serviceAccountName: {{ include "flux.fullname" . }}-ca
+  containers:
+    - name: flux-cli
+      image: {{.Values.cli.image.repository}}:{{.Values.cli.image.tag}}
+      command: ["/bin/sh"]
+      args: ["-c", "while true; do sleep 30; done;"]

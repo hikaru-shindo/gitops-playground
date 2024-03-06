@@ -31,6 +31,37 @@ The following software is required to test out the scenarios:
 |Gitea ArgoCD|argocd|argocd|
 |Gitea FluxCD|fluxcd|fluxcd|
 
+### CLI
+
+If you install ArgoCD and/or FluxCD special CLI pods will be created providing the respective tools in an environment 
+with all the required privileges to manage the GitOps operator.
+
+#### ArgoCD
+
+For ArgoCD we can appropriate the deployment itself to get a shell.  
+This pod was authenticated on installation automatically to ArgoCD so we do not need to install the ArgoCD CLI on our 
+local machine.
+
+```shell
+# Check tool version
+kubectl exec -n argocd deploy/argocd-server -- argocd version
+# Start an interactive shell
+kubectl exec -n argocd -it deploy/argocd-server -- sh
+```
+
+#### FluxCD
+
+For FluxCD we can use the special `flux-cli` pod to get a shell.  
+This pod has a `ServiceAccount` with the `ClusterAdmin` role attached to it, so we can use the flux CLI to bootstrap and 
+manage FluxCD without installing the flux CLI on our local machine.
+
+```shell
+# Check tool version
+kubectl exec -n flux-system pods/flux-cli -- flux version
+# Start an interactive shell
+kubectl exec -n flux-system -it pods/flux-cli -- sh
+```
+
 ## Integrated SCM
 
 This playground includes Gitea so you can create local repositories and connect them to your GitOps operator
