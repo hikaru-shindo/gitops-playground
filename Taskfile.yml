@@ -67,6 +67,7 @@ tasks:
   flux:install:
     internal: true
     desc: Install flux to test cluster
+    dir: flux2/_bootstrap
     vars:
       enabled: '{{default "true" .enabled}}'
       # renovate: datasource=github-releases depName=fluxcd/flux2
@@ -74,9 +75,9 @@ tasks:
     status:
       - 'test "{{.enabled}}" != "true"'
     cmds:
-      - kubectl apply --context {{.cluster_name}} -f https://github.com/fluxcd/flux2/releases/download/{{ .flux_version }}/install.yaml
-      - kubectl get deploy --context {{.cluster_name}} --output name -n flux-system | xargs -n1 -t kubectl rollout status --context {{.cluster_name}} -n flux-system
-    
+      - helm upgrade --kube-context {{.cluster_name}} --install --wait --namespace flux-system --create-namespace --set 'cli.image.tag={{.flux_version}}' flux flux/
+      - kubectl exec --context {{.cluster_name}} -n flux-system pods/flux-cli -- flux install --namespace flux-system
+
   argo:install:
     internal: true
     desc: Install argocd to test cluster
@@ -88,6 +89,11 @@ tasks:
     cmds:
       - helm dep build argocd/
       - helm upgrade --kube-context {{.cluster_name}} --install --wait --namespace argocd --create-namespace argocd argocd/
+      - |-
+        kubectl exec --context {{.cluster_name}} -n argocd deploy/argocd-server -- argocd login argocd-server.argocd.svc.cluster.local \
+        --insecure \
+        --username admin \
+        --password $(kubectl get secret argocd-initial-admin-secret --context {{ .cluster_name }} -n argocd -o jsonpath="{.data.password}" | base64 -d | xargs echo)
       - task: argo:password
 
   argo:init:

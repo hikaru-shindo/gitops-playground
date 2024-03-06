@@ -1,0 +1,4 @@
+apiVersion: v2
+name: flux
+description: A helm chart for bootstrapping fluxcd in the cluster
+version: 0.1.0

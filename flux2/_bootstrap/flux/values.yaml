@@ -1,0 +1,8 @@
+# Default values for helpers.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+cli:
+  image:
+    repository: ghcr.io/fluxcd/flux-cli
+    tag: v2.0.0
