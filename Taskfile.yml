@@ -220,6 +220,7 @@ tasks:
       - git -C {{.temp_dir}}/repo init --initial-branch=main {{.temp_dir}}/repo
       - git -C {{.temp_dir}}/repo add -A
       - git -C {{.temp_dir}}/repo commit -m "Initialise {{.owner}}/{{.repo}} ..."
+      - git -C {{.temp_dir}}/repo config --bool core.bare true
       - echo "Importing repository {{.owner}}/{{.repo}} ..."
       - kubectl exec --context {{ .cluster_name }} -n gitea {{.pod_name}} -c gitea -- rm -rf /data/git/gitea-repositories/{{.owner}}/{{.repo}}.git
       - kubectl cp -n gitea -c gitea {{.temp_dir}}/repo/.git {{.pod_name}}:/data/git/gitea-repositories/{{.owner}}/{{.repo}}.git
