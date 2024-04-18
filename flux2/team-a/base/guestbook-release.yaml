@@ -1,0 +1,14 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: guestbook
+spec:
+  interval: 1m
+  releaseName: guestbook
+  serviceAccountName: team-a
+  chart:
+    spec:
+      chart: helm-guestbook
+      sourceRef:
+        kind: GitRepository
+        name: guestbook

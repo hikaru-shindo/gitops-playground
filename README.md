@@ -24,12 +24,12 @@ The following software is required to test out the scenarios:
 
 ### Credentials
 
-|Service|Username|Password|
-|--|--|--|
-|ArgoCD|admin|Printed after creation of cluster, can also be retrieved with `task argo:password` later|
-|Gitea Admin|gitops|gitops|
-|Gitea ArgoCD|argocd|argocd|
-|Gitea FluxCD|fluxcd|fluxcd|
+| Service      | Username | Password                                                                                 |
+|--------------|----------|------------------------------------------------------------------------------------------|
+| ArgoCD       | admin    | Printed after creation of cluster, can also be retrieved with `task argo:password` later |
+| Gitea Admin  | gitops   | gitops                                                                                   |
+| Gitea ArgoCD | argocd   | argocd                                                                                   |
+| Gitea FluxCD | flux2    | flux2                                                                                    |
 
 ### CLI
 

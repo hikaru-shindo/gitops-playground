@@ -1,0 +1,14 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: GitRepository
+metadata:
+  name: guestbook
+spec:
+  interval: 5m
+  url: https://github.com/argoproj/argocd-example-apps
+  ref:
+    branch: master
+  ignore: |-
+    # exclude all
+    /*
+    # include charts directory
+    !/helm-guestbook/

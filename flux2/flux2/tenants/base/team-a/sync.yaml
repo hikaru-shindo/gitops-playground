@@ -1,0 +1,74 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitea-auth
+  namespace: team-a-production
+type: Opaque
+data:
+  username: Zmx1eDI=
+  password: Zmx1eDI=
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: team-a
+  namespace: team-a-production
+spec:
+  interval: 1m
+  url: http://gitea-http.gitea.svc.cluster.local/flux2/team-a
+  ref:
+    branch: main
+  secretRef:
+    name: gitea-auth
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: team-a
+  namespace: team-a-production
+spec:
+  serviceAccountName: team-a
+  interval: 5m
+  sourceRef:
+    kind: GitRepository
+    name: team-a
+  path: ./production
+  prune: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitea-auth
+  namespace: team-a-staging
+type: Opaque
+data:
+  username: Zmx1eDI=
+  password: Zmx1eDI=
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: team-a
+  namespace: team-a-staging
+spec:
+  interval: 1m
+  url: http://gitea-http.gitea.svc.cluster.local/flux2/team-a
+  ref:
+    branch: main
+  secretRef:
+    name: gitea-auth
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: team-a
+  namespace: team-a-staging
+spec:
+  serviceAccountName: team-a
+  interval: 5m
+  sourceRef:
+    kind: GitRepository
+    name: team-a
+  path: ./staging
+  prune: true

@@ -34,7 +34,6 @@ tasks:
           echo "Gitea (enabled: true)"
         silent: true
       - minikube start -p {{.cluster_name}} --cpus={{.cpus}} --disk-size='{{.disk_size}}' --kubernetes-version={{.kubernetes_version}}
-      - task: namespaces:create
       - task: scm:install
       - task: scm:init
       - task: flux:install
@@ -54,15 +53,6 @@ tasks:
     desc: Show status of a test cluster
     cmds:
       - minikube status -p {{.cluster_name}} || true
-
-  namespaces:create:
-    internal: true
-    desc: Create initial team namespaces
-    cmds:
-      - kubectl create namespace team-a-production
-      - kubectl create namespace team-a-staging
-      - kubectl create namespace team-b-production
-      - kubectl create namespace team-b-staging
 
   flux:install:
     internal: true
@@ -112,8 +102,7 @@ tasks:
       - sh: kubectl --context {{ .cluster_name }} get namespace flux-system
         msg: FluxCD is not currently installed on the test cluster {{.cluster_name}}
     cmds:
-      - cmd: echo "Not yet implemented, sorry 😢 ..."
-        silent: true
+      - kubectl exec --context {{.cluster_name}} -n flux-system pods/flux-cli -- flux bootstrap git --namespace flux-system --allow-insecure-http=true --url http://gitea-http.gitea.svc.cluster.local/flux2/flux2.git --username flux2 --password flux2 --token-auth --path clusters/test
 
   argo:forward:
     vars:
@@ -146,7 +135,7 @@ tasks:
     cmds:
       - for:
         - '{"username": "argocd", "password": "argocd"}'
-        - '{"username": "fluxcd", "password": "fluxcd"}'
+        - '{"username": "flux2", "password": "flux2"}'
         task: scm:create-user
         vars:
           username: '{{(.ITEM | mustFromJson).username | mustToJson}}'
@@ -156,6 +145,9 @@ tasks:
         - '{"owner": "argocd", "repo": "cluster-addons", "source_path": "argocd/cluster-addons", "description": "Repository for an infrastructure/plattform team"}'
         - '{"owner": "argocd", "repo": "team-a", "source_path": "argocd/team-a", "description": "Repository for an imaginary team A"}'
         - '{"owner": "argocd", "repo": "team-b", "source_path": "argocd/team-b", "description": "Repository for an imaginary team B"}'
+        - '{"owner": "flux2", "repo": "flux2", "source_path": "flux2/flux2", "description": "Repository for an infrastructure/plattform team"}'
+        - '{"owner": "flux2", "repo": "team-a", "source_path": "flux2/team-a", "description": "Repository for an imaginary team A"}'
+        - '{"owner": "flux2", "repo": "team-b", "source_path": "flux2/team-b", "description": "Repository for an imaginary team B"}'
         task: scm:import-repo
         vars:
           owner:  '{{(.ITEM | mustFromJson).owner }}'
