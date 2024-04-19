@@ -121,7 +121,29 @@ Those repositories contain a more normal GitOps layout and represents different 
 
 #### FluxCD
 
-Currently FluxCD can be installed to the cluster but there are currently no examples to be applied, sorry 😢
+##### flux2/flux2
+
+This repository is used to bootstrap FluxCD and cluster addons to the cluster.
+It would be managed by a platform team.
+
+The bootstrap happens with the `flux bootstrap` command.
+
+**Directories**
+
+* clusters - contains the basic configuration for the clusters
+  * */flux-system - contains the fluxcd installation itself, it will be updated by the `flux bootstrap` command
+* infrastructure - contains the infrastructure components like the ingress controller, cert manager, ...
+* tenants - contains the configuration for specific tenants (eg. rbac, namespaces, configuration for team repositories, ...)
+
+##### flux2/team-a and flux2/team-b
+
+Those repositories contain a more normal GitOps layout and represents different teams deploying end-user applications.
+
+**Directories**
+
+* base - contains basic kustomization files for the deployments and releases
+* production - contains kustomization files to patch the base for production
+* staging - contains kustomization files to patch the base for staging
 
 ## go-task Targets
 
