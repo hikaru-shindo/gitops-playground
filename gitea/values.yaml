@@ -23,7 +23,7 @@ gitea:
   gitea:
     admin:
       username: gitops
-      password: gitops
+      password: gitops123
       email: gitops@gitea.cluster.local
     config:
       server:

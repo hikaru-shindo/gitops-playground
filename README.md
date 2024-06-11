@@ -27,7 +27,7 @@ The following software is required to test out the scenarios:
 | Service      | Username | Password                                                                                 |
 |--------------|----------|------------------------------------------------------------------------------------------|
 | ArgoCD       | admin    | Printed after creation of cluster, can also be retrieved with `task argo:password` later |
-| Gitea Admin  | gitops   | gitops                                                                                   |
+| Gitea Admin  | gitops   | gitops123                                                                                |
 | Gitea ArgoCD | argocd   | argocd                                                                                   |
 | Gitea FluxCD | flux2    | flux2                                                                                    |
 
