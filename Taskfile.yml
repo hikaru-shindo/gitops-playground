@@ -16,7 +16,7 @@ tasks:
       disk_size: '{{default "20000mb" .disk_size}}'
       enable_argo: '{{default "true" .enable_argo}}'
       enable_flux: '{{default "true" .enable_flux}}'
-      kubernetes_version: '{{default "1.29.2" .kubernetes_version}}'
+      kubernetes_version: '{{default "1.31.1" .kubernetes_version}}'
     preconditions:
       - sh: minikube version
         msg: minikube is not installed
