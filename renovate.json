@@ -3,9 +3,12 @@
   "extends": [
     "config:recommended"
   ],
-  "regexManagers": [
+  "customManagers": [
     {
-      "fileMatch": ["^Taskfile.yml$"],
+      "customType": "regex",
+      "fileMatch": [
+        "^Taskfile.yml$"
+      ],
       "matchStrings": [
         "#\\s*renovate:\\s+datasource=(?<datasource>github-releases)\\s+depName=(?<depName>.+)\\s+\\w+_version:\\s+\"?(?<currentValue>v?[\\d\\.]+)(-.+)?\"?"
       ]
