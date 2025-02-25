@@ -61,7 +61,7 @@ tasks:
     vars:
       enabled: '{{default "true" .enabled}}'
       # renovate: datasource=github-releases depName=fluxcd/flux2
-      flux_version: "v2.5.0"
+      flux_version: "v2.5.1"
     status:
       - 'test "{{.enabled}}" != "true"'
     cmds:
