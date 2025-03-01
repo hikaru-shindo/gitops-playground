@@ -4,6 +4,6 @@ version: 1.0.0
 description: Wraps the upstream gitea helm chart
 dependencies:
   - name: gitea
-    version: 10.6.0 # run `helm dep update .` in this folder before changing and pushing version
+    version: 11.0.0 # run `helm dep update .` in this folder before changing and pushing version
     repository: https://dl.gitea.com/charts/
     # Information about helm chart here: https://artifacthub.io/packages/helm/gitea/gitea
