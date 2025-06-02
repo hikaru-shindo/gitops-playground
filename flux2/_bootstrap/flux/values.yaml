@@ -5,4 +5,4 @@
 cli:
   image:
     repository: ghcr.io/fluxcd/flux-cli
-    tag: v2.6.0
+    tag: v2.6.1
